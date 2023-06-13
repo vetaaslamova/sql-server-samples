@@ -1,0 +1,36 @@
+# Build Pipeline for SQL Database
+
+# The *trigger* specifies what triggers this pipeline to run automatically. In this case: a *commit* against *master*
+trigger:
+- master
+
+# The *pool* specifies which VM image to use for executing this pipeline.
+pool:
+  name: Azure Pipelines
+  vmImage: windows-2019
+
+variables:
+  BuildConfiguration: 'Release'
+
+# Here come the actual "build steps". In this case, we have a "simple" build pipeline - we will look at pipelines with multiple "stages" later.
+steps:
+### You do not need to remember the configuration of a "task": Azure DevOps Pipelines has built-in visual tools for adding tasks and configuring their settings.
+- task: VSBuild@1
+  displayName: 'Build Data Warehouse'
+  inputs:
+    solution: 'samples/databases/wide-world-importers/wwi-dw-ssdt/WideWorldImportersDW.sln'
+    configuration: '$(BuildConfiguration)'
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)'
+    Contents: '**/bin/$(BuildConfiguration)/**/*.dacpac'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+# The Artifact is the result of this pipeline. By publishing it, a deployment pipeline can pick it up for deployment to other environments.
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)'
+    artifact: 'SQLDW'
+    publishLocation: 'pipeline'
